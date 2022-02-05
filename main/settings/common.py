@@ -39,6 +39,7 @@ INSTALLED_APPS = [
     # custom apps
     'users',
     'tokens',
+    'masters',
 ]
 
 MIDDLEWARE = [
@@ -241,11 +242,9 @@ USE_TZ = False
 # https://docs.djangoproject.com/en/3.0/howto/static-files/
 STATIC_URL = '/static/'
 MEDIA_PATH = 'media'
-STREAM_MEDIA_PATH = os.path.join('streams', 'media')
 MEDIA_URL = '%s/%s/' % (BASE_URL, MEDIA_PATH)
 STATIC_ROOT = os.path.join(PROJECT_DIR, 'static')
 MEDIA_ROOT = os.path.join(PROJECT_DIR, 'media')
-TEST_FILES_ROOT = os.path.join(PROJECT_DIR, 'test_files')
 TEMPLATES_ROOT = os.path.join(PROJECT_DIR, 'templates')
 DEFAULT_ROOT = os.path.join(PROJECT_DIR, 'default')
 
