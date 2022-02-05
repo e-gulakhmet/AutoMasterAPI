@@ -13,28 +13,25 @@ from tokens.serializers import TokenObtainPairSerializer
 
 class UserFactoryMixin:
     USER_PASSWORD = 'sdw332!4TdSD'
+    CAR_MODEL = 'BMW'
 
     @staticmethod
     def __random_char(length=10, repeat=1):
         return ''.join(utils.random.random_simple_string(length) for _ in range(repeat))
 
-    def create_user(self, email: str, first_name: str, last_name: str, **kwargs) -> 'User':
+    def create_user(self, email: str, first_name: str, second_name: str, **kwargs) -> 'User':
         if len(first_name) == 0:
             first_name = 'None'
-        if len(last_name) == 0:
-            last_name = 'None'
-        user = User.objects.create_user(email=email, password=self.USER_PASSWORD, first_name=first_name,
-                                        last_name=last_name, **kwargs)
+        if len(second_name) == 0:
+            second_name = 'None'
+        user = User.objects.create_user(email=email, first_name=first_name, second_name=second_name,
+                                        car_model=self.CAR_MODEL, password=self.USER_PASSWORD, **kwargs)
         user.save()
         return user
 
     def create_random_user(self, **kwargs) -> 'User':
-        return self.create_user(
-            email=self.__random_char() + "@gmail.com",
-            first_name=self.__random_char(),
-            last_name=self.__random_char(),
-            **kwargs
-        )
+        return self.create_user(email=self.__random_char() + "@gmail.com", first_name=self.__random_char(),
+                                second_name=self.__random_char(), **kwargs)
 
     @staticmethod
     def create_client_with_auth(user: 'User') -> APIClient:

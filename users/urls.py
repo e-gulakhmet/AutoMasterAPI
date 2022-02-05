@@ -1,4 +1,3 @@
-from django.contrib.auth.decorators import user_passes_test
 from django.urls import path
 from rest_framework import routers
 
@@ -9,7 +8,7 @@ app_name = 'Users api'
 router = routers.SimpleRouter(trailing_slash=False)
 
 urlpatterns = [
-    # path('register', views.UserCreateView.as_view(), name='register'),
+    path('register', views.UserCreateView.as_view(), name='register'),
     # # Password
     # path('password/change', views.ChangePasswordView.as_view(), name='change_password'),
     # path('password/reset', views.RequestResetPasswordView.as_view(), name='request_reset_password'),
