@@ -35,9 +35,6 @@ class JWTAuthentication(BaseJWTAuthentication):
         if not user.is_active:
             raise AuthenticationFailed(_('User is inactive'), code='user_inactive')
 
-        if self._is_user_hard_banned(user):
-            raise AuthenticationFailed(detail='User is hard banned', code='user_hard_banned')
-
         # Set online status
         cache.set(user.pk, 1, timeout=600)
 

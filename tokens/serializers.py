@@ -35,9 +35,7 @@ class EmailField(serializers.EmailField):
 
 class TokenObtainSerializer(serializers.Serializer):
     user: User
-    default_error_messages = {
-        'no_active_account': _('Wrong login or password')
-    }
+    default_error_messages = {'no_active_account': _('Wrong login or password')}
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -65,7 +63,7 @@ class TokenObtainSerializer(serializers.Serializer):
                 'no_active_account',
             )
 
-        return {}
+        return attrs
 
     @classmethod
     def get_token(cls, user):

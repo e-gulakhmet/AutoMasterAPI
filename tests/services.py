@@ -1,48 +1,14 @@
 import random
-import os
-from abc import ABC, abstractmethod
-from enum import Enum
+from abc import ABC
 
-from django.contrib.contenttypes.models import ContentType
-from django.urls import reverse
 from rest_framework.test import APIClient
 from django.core.files import File
 from django.conf import settings
 
 import utils.random
-from categories.models import CategoryToContentRelation, Category
-from favorites.models import Favorite
-from main.enums import UserAgeType
-from payments.enums import PaymentSystemTypes
-from poll.models import Poll, PollOption, PollOptionMark
-from publications.models import Link
-from purchases.models import Purchase
-from shop.models import CatalogProduct, Catalog
-from stats.models import Expand
 from utils.helper import get_file_rb
-from search.models import SearchHistory
-
-from chats.models import ChatRoom, ChatRoomMessage, ChatCustomer
-from users.models import User, Subscription, Mute, Block
-from users.tokens.serializers import TokenObtainPairSerializer
-from album.models import Album
-from utils.vcr import VCRMixin
-from streams.models import Stream, Ticket
-from tags.models import Tag, TagToContentRelation, ContentUserTag
-from comments.models import Comment
-from likes.models import Like
-from views.models import View
-from subscriptions.services import SubscriptionService
-from posts.models import Post
-from posts.documents import PostDocument
-from payments.services import PaymentService, BasePaymentSystemService
-from file_manager.models import Attachment, AttachmentToContentRelation, ImageProperties
-from fundraising.models import Fundraising, FundraisingMilestone
-from donations.models import Donate
-from notifications.models import Notification
-from notifications.enums import NotificationsCodes
-from chats.enums import ChatTypes, ChatCustomerTypes
-from stories.models import Story
+from users.models import User
+from tokens.serializers import TokenObtainPairSerializer
 
 
 class UserFactoryMixin:
