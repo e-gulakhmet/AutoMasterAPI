@@ -25,7 +25,6 @@ ALLOWED_HOSTS = ['0.0.0.0', 'localhost', '127.0.0.1']
 # Application definition
 INSTALLED_APPS = [
     # system apps
-    'users.staff_config',
     'django.contrib.contenttypes',
     'django.contrib.admin',
     'django.contrib.auth',
@@ -35,14 +34,14 @@ INSTALLED_APPS = [
     'rest_framework',
     'drf_yasg',
     'corsheaders',
-    'storages',
     'rest_framework_simplejwt.token_blacklist',
+
     # custom apps
     'users',
+    'tokens',
 ]
 
 MIDDLEWARE = [
-    'main.middleware.TimezoneMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'corsheaders.middleware.CorsMiddleware',
@@ -172,7 +171,7 @@ AUTH_PASSWORD_VALIDATORS = [
 # https://www.django-rest-framework.org/api-guide/permissions/#setting-the-permission-policy
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
-        'users.tokens.authentication.JWTAuthentication',
+        'tokens.authentication.JWTAuthentication',
         'rest_framework.authentication.SessionAuthentication',
         'rest_framework.authentication.BasicAuthentication',
     ],
