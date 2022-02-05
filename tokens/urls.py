@@ -10,10 +10,10 @@ app_name = 'Users api'
 router = routers.SimpleRouter(trailing_slash=False)
 
 urlpatterns = [
-    path('', views.TokenObtainPairView.as_view(), name='token_obtain_pair'),
-    path('refresh', views.TokenRefreshView.as_view(), name='token_refresh'),
-    path('verify', TokenVerifyView.as_view(), name='token_verify'),
-    path('check', views.LoginCheckView.as_view(), name='token_check_auth'),
+    path('', views.TokenObtainPairView.as_view(), name='obtain_pair'),
+    path('refresh', views.TokenRefreshView.as_view(), name='refresh'),
+    path('verify', TokenVerifyView.as_view(), name='verify'),
+    path('check', views.LoginCheckView.as_view(), name='check_auth'),
 ]
 
 urlpatterns += router.urls
