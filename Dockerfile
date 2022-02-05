@@ -1,7 +1,7 @@
 ###########
 # BUILDER #
 ###########
-FROM python:3.9-buster
+FROM python:3.10-buster
 
 LABEL maintainer="Enes Gulakhmet <wwho.mann.3@gmail.com>"
 

@@ -6,13 +6,13 @@ SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'stage)(r$zokmzkv)6=jrde6vu)94a
 SECURE_AUTH_SALT = os.environ.get('SECURE_AUTH_SALT',
                                   'stage1_n=qJO51@GW%kqewWphc-`]*3$@6336H7sxhogE5tSO|aoM|3Q(zD3.+%E}~p<L')
 
-BASE_URL = os.environ.get('BASE_URL', 'https://api.sna.goodbit.dev')
-BASE_CLIENT_URL = os.environ.get('BASE_CLIENT_URL', 'https://sna.goodbit.dev')
+BASE_URL = os.environ.get('BASE_URL', '')
+BASE_CLIENT_URL = os.environ.get('BASE_CLIENT_URL', '')
 
 # SECURITY WARNING: update this when you have the production host
 ALLOWED_HOSTS = os.environ.get(
     'ALLOWED_HOSTS',
-    'api.sna.goodbit.dev,admin.sna.goodbit.dev,sna.goodbit.dev,rtmp.sna.goodbit.dev,localhost,server-api').split(',')
+    'localhost,server-main').split(',')
 
 LOG_PATH = os.path.join(BASE_DIR, '../logs')
 LOGGING = {

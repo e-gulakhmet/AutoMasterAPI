@@ -35,12 +35,14 @@ class User(AbstractBaseUser, PermissionsMixin):
     last_name = models.CharField(_('Last name'), max_length=150)
     middle_name = models.CharField(_('Middle name'), max_length=150, blank=True)
 
+    car_model = models.CharField(_('Car model'), max_length=100)
+
     is_staff = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
     date_joined = models.DateTimeField(default=timezone.now)
 
     USERNAME_FIELD = 'email'
-    REQUIRED_FIELDS = ['email']
+    REQUIRED_FIELDS = []
 
     objects = UserManager()
 
