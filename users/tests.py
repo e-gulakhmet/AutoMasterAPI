@@ -9,6 +9,7 @@ from users.models import User
 
 USER_REGISTER_VIEW_NAME = 'users:register'
 USER_ME_VIEW_NAME = 'users:me'
+USER_CHANGE_PASSWORD_VIEW_NAME = 'users:change_password'
 
 
 class UserRegistrationTestCase(IsAuthClientTestCase, APITestCase):
@@ -39,6 +40,30 @@ class UserRegistrationTestCase(IsAuthClientTestCase, APITestCase):
 
         response = self.client.post(reverse(USER_REGISTER_VIEW_NAME), data=self.credentials)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST, response.data)
+
+
+class UserPasswordTestCase(IsAuthClientTestCase, APITestCase):
+    def test_change_password(self):
+        data = {
+            'password': self.USER_PASSWORD,
+            'new_password': 'New_password123',
+        }
+
+        response = self.client.post(reverse(USER_CHANGE_PASSWORD_VIEW_NAME), data)
+        self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
+        self.user.refresh_from_db()
+        self.assertTrue(self.user.check_password(data['new_password']))
+
+    def test_fail_change_password_with_wrond_old_password(self):
+        data = {
+            'password': 'Wrong_password',
+            'new_password': 'New_password123',
+        }
+
+        response = self.client.post(reverse(USER_CHANGE_PASSWORD_VIEW_NAME), data)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST, response.data)
+        self.user.refresh_from_db()
+        self.assertFalse(self.user.check_password(data['new_password']))
 
 
 class UserTestCase(IsAuthClientTestCase, APITestCase):
