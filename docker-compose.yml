@@ -1,0 +1,47 @@
+version: '3.9'
+
+networks:
+  #  docker network create --driver=bridge --internal=false --attachable main-gnet
+  default:
+    driver: bridge
+    external:
+      name: main-gnet
+
+volumes:
+  media_volume:
+
+services:
+  postgres:
+    image: postgres:13.3
+    container_name: service-postgres
+    environment:
+      POSTGRES_USER: main
+      POSTGRES_PASSWORD: main
+      POSTGRES_DB: main
+    volumes:
+      - ./pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U main" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  main:
+    build: .
+    container_name: service-main
+    environment:
+      - DJANGO_SETTINGS_MODULE=main.settings.local-docker
+      - WAITING_DATABASE=true
+      - MIGRATE=true
+      - DB_HOST=sna-postgres
+      - DB_PORT=5432
+    command: python manage.py runserver 0.0.0.0:80
+    volumes:
+      - .:/usr/src/app
+      - media_volume:/usr/src/app/media
+    ports:
+      - "80:80"
+    depends_on:
+      - postgres
