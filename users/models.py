@@ -6,8 +6,21 @@ from django.utils.translation import gettext_lazy as _
 
 
 class UserManager(BaseUserManager):
+    def normalize_email(self, email_address):
+        """ Normalize the email address by lower casing the domain part of it. """
+
+        email_address = email_address or ''
+        try:
+            email_name, domain_part = email_address.strip().rsplit('@', 1)
+        except ValueError:
+            pass
+        else:
+            email_address = email_name.lower() + '@' + domain_part.lower()
+        return email_address
+
     def create_user(self, email, password, **extra_fields):
         """ Create and save a User with the given email and password. """
+
         if not email:
             raise ValueError(_('The Email must be set'))
         email = self.normalize_email(email)
@@ -18,6 +31,7 @@ class UserManager(BaseUserManager):
 
     def create_superuser(self, email, password, **extra_fields):
         """ Create and save a SuperUser with the given email and password. """
+
         extra_fields.setdefault('is_staff', True)
         extra_fields.setdefault('is_superuser', True)
         extra_fields.setdefault('is_active', True)
