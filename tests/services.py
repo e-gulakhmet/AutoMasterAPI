@@ -6,6 +6,7 @@ from django.core.files import File
 from django.conf import settings
 
 import utils.random
+from masters.models import Master
 from utils.helper import get_file_rb
 from users.models import User
 from tokens.serializers import TokenObtainPairSerializer
@@ -61,27 +62,11 @@ class IsAuthClientTestCase(UserFactoryMixin, ABC):
 
 
 class TestDataService(UserFactoryMixin):
-    DEFAULT_ENTITIES_COUNT = 10
-
-    used_users = set([])
-    used_verified_users = set([])
-    used_acp_users = set([])
-
-    def _get_next_random_user(self) -> User:
-        """ Return random user excluding already selected """
-
-        users = set(User.objects.all())
-        to_select = users - self.used_users
-        if not to_select:
-            to_select = users
-            self.used_users = set([])
-        choice = random.choice(list(to_select))
-        self.used_users.add(choice)
-        return choice
-
-    def create_users(self, count: int = DEFAULT_ENTITIES_COUNT):
-        for _ in range(count):
-            self.create_random_user()
+    @staticmethod
+    def create_master(first_name: str = utils.random.random_simple_string(10),
+                      second_name: str = utils.random.random_simple_string(10),
+                      middle_name: str = utils.random.random_simple_string(10)) -> Master:
+        return Master.objects.create(first_name=first_name, second_name=second_name, middle_name=middle_name)
 
 
 def get_test_jpg_picture() -> File:

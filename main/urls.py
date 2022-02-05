@@ -43,5 +43,6 @@ urlpatterns = [
     re_path(r'^redoc/$', schema_view.with_ui('redoc', cache_timeout=0), name='schema-redoc'),
     # Web API
     path('token/', include('tokens.urls', namespace='tokens')),
-    path('user/', include('users.urls', namespace='users'))
+    path('user/', include('users.urls', namespace='users')),
+    path('master/', include('masters.urls', namespace='masters'))
 ] + static(settings.MEDIA_PATH, document_root=settings.MEDIA_ROOT)
