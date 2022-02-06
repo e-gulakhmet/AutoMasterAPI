@@ -1,3 +1,6 @@
+from datetime import timedelta
+
+from django.conf import settings
 from django.contrib.auth.models import PermissionsMixin
 from django.db import models
 
@@ -10,8 +13,14 @@ class Register(models.Model):
     end_at = models.DateTimeField()
 
     created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ('master', 'start_at')
 
     def __str__(self):
         return f'{self.pk} - {self.user.email} to {self.master.get_full_name()}'
 
-    # TODO: Добавить, автоматическое указание end_at
+    def save(self, force_insert=False, force_update=False, using=None, update_fields=None):
+        self.end_at = self.start_at + timedelta(hours=settings.REGISTER_LIFETIME)
+        super().save()

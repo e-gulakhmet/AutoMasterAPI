@@ -1,12 +1,15 @@
 import random
 from abc import ABC
+from datetime import datetime, timedelta
 
+from django.utils import timezone
 from rest_framework.test import APIClient
 from django.core.files import File
 from django.conf import settings
 
 import utils.random
 from masters.models import Master
+from registers.models import Register
 from utils.helper import get_file_rb
 from users.models import User
 from tokens.serializers import TokenObtainPairSerializer
@@ -67,6 +70,39 @@ class TestDataService(UserFactoryMixin):
                       second_name: str = utils.random.random_simple_string(10),
                       middle_name: str = utils.random.random_simple_string(10)) -> Master:
         return Master.objects.create(first_name=first_name, second_name=second_name, middle_name=middle_name)
+
+    @staticmethod
+    def create_register(user: User, master: Master, start_at: datetime = timezone.now()) -> Register:
+        return Register.objects.create(user=user, master=master, start_at=start_at)
+
+    @staticmethod
+    def get_time_in_working_range(time: datetime = timezone.now(),
+                                  offset_before_in_hours: int = 0,
+                                  offset_after_in_hours: int = 0, ) -> datetime:
+        """
+        Возвращает время, которое:
+        - больше текущего
+        - входит в рабочие дни
+        - входит в рабочее время
+        - оставляет запас на время процесса работы
+        """
+
+        now_time = timezone.now()
+
+        if time < now_time:
+            time = now_time
+
+        working_day_starts_at_hour = settings.WORKING_DAY_STARTS_AT_HOUR + offset_before_in_hours
+        working_day_ends_at_hour = \
+            settings.WORKING_DAY_ENDS_AT_HOUR - settings.REGISTER_LIFETIME - offset_after_in_hours
+
+        while not (working_day_starts_at_hour < time.hour <= working_day_ends_at_hour):
+            time += timedelta(minutes=30)
+
+        while time.weekday() in settings.NON_WORKING_DAYS_OF_THE_WEEK:
+            time += timedelta(days=1)
+
+        return time
 
 
 def get_test_jpg_picture() -> File:
