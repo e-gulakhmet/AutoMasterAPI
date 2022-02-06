@@ -7,7 +7,8 @@ from django.utils import timezone
 from rest_framework import status
 
 from masters.models import Master
-from registers.exceptions import NonWorkingTime, MasterIsBusy, RegisterAlreadyStarted
+from registers.exceptions import NonWorkingTime, MasterIsBusy, RegisterAlreadyStarted, \
+    UserAlreadyHasRegisterAtTheSameTime
 from registers.models import Register
 from registers.services import RegisterService
 from tests.services import IsAuthClientTestCase, TestDataService
@@ -63,8 +64,9 @@ class RegisterCreateTestCase(IsAuthClientTestCase, APITestCase):
     def test_create_register(self):
         data = {
             'start_at': self.test_data_service.get_time_in_working_range(),
+            'master_id': self.master.pk
         }
-        response = self.client.post(reverse(REGISTER_CREATE_VIEW_NAME, args=(self.master.pk,)), data)
+        response = self.client.post(reverse(REGISTER_CREATE_VIEW_NAME), data)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED, response.data)
         register = Register.objects.get(pk=response.data['pk'])
         self.assertEqual(register.master, self.master)
@@ -74,54 +76,90 @@ class RegisterCreateTestCase(IsAuthClientTestCase, APITestCase):
 
     def test_fail_create_register_on_busy_time(self):
         start_at = self.test_data_service.get_time_in_working_range()
-        self.test_data_service.create_register(self.user, self.master, start_at)
-        data = {'start_at': start_at}
+        user_2 = self.create_random_user()
+        self.test_data_service.create_register(user_2, self.master, start_at)
+        data = {'start_at': start_at, 'master_id': self.master.pk}
 
-        response = self.client.post(reverse(REGISTER_CREATE_VIEW_NAME, args=(self.master.pk,)), data)
+        response = self.client.post(reverse(REGISTER_CREATE_VIEW_NAME), data)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST, response.data)
-        self.assertEqual(str(response.data['non_field_errors'][0]), MasterIsBusy.default_detail)
+        self.assertEqual(str(response.data[0]), MasterIsBusy.default_detail)
+        self.assertFalse(
+            Register.objects.filter(user=self.user, master=self.master, start_at=data['start_at']).exists()
+        )
 
     def test_fail_create_register_to_master_on_weekend(self):
         start_at = self.test_data_service.get_time_in_working_range()
         while start_at.weekday() not in settings.NON_WORKING_DAYS_OF_THE_WEEK:
             start_at += timedelta(days=1)
 
-        data = {'start_at': start_at}
+        data = {'start_at': start_at, 'master_id': self.master.pk}
 
-        response = self.client.post(reverse(REGISTER_CREATE_VIEW_NAME, args=(self.master.pk,)), data)
+        response = self.client.post(reverse(REGISTER_CREATE_VIEW_NAME), data)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST, response.data)
         self.assertEqual(str(response.data['non_field_errors'][0]), NonWorkingTime.default_detail)
+        self.assertFalse(
+            Register.objects.filter(user=self.user, master=self.master, start_at=data['start_at']).exists()
+        )
 
     def test_fail_create_register_on_less_than_an_hour_before_busy_time(self):
         start_at = self.test_data_service.get_time_in_working_range(offset_after_in_hours=1)
 
         self.test_data_service.create_register(self.user, self.master,  start_at + timedelta(minutes=30))
-        data = {'start_at': start_at}
+        data = {'start_at': start_at, 'master_id': self.master.pk}
 
-        response = self.client.post(reverse(REGISTER_CREATE_VIEW_NAME, args=(self.master.pk,)), data)
+        response = self.client.post(reverse(REGISTER_CREATE_VIEW_NAME), data)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST, response.data)
-        self.assertEqual(str(response.data['non_field_errors'][0]), MasterIsBusy.default_detail)
+        self.assertEqual(str(response.data[0]), MasterIsBusy.default_detail)
+        self.assertFalse(
+            Register.objects.filter(user=self.user, master=self.master, start_at=data['start_at']).exists()
+        )
 
     def test_fail_create_register_on_less_than_an_hour_before_the_end_of_the_working_day(self):
         start_at = self.test_data_service.get_time_in_working_range()
         start_at = start_at.replace(hour=settings.WORKING_DAY_ENDS_AT_HOUR - 1, minute=30)
-        print(start_at)
 
-        data = {'start_at': start_at}
+        data = {'start_at': start_at, 'master_id': self.master.pk}
 
-        response = self.client.post(reverse(REGISTER_CREATE_VIEW_NAME, args=(self.master.pk,)), data)
+        response = self.client.post(reverse(REGISTER_CREATE_VIEW_NAME), data)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST, response.data)
         self.assertEqual(str(response.data['non_field_errors'][0]), NonWorkingTime.default_detail)
+        self.assertFalse(
+            Register.objects.filter(user=self.user, master=self.master, start_at=data['start_at']).exists()
+        )
 
     def test_fail_create_register_to_non_working_time(self):
         start_at = self.test_data_service.get_time_in_working_range()
         start_at = start_at.replace(hour=settings.WORKING_DAY_ENDS_AT_HOUR + 1)
 
-        data = {'start_at': start_at}
+        data = {'start_at': start_at, 'master_id': self.master.pk}
 
-        response = self.client.post(reverse(REGISTER_CREATE_VIEW_NAME, args=(self.master.pk,)), data)
+        response = self.client.post(reverse(REGISTER_CREATE_VIEW_NAME), data)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST, response.data)
         self.assertEqual(str(response.data['non_field_errors'][0]), NonWorkingTime.default_detail)
+        self.assertFalse(
+            Register.objects.filter(user=self.user, master=self.master, start_at=data['start_at']).exists()
+        )
+
+    def test_create_register_while_another_master_is_busy(self):
+        start_at = self.test_data_service.get_time_in_working_range()
+        user_2 = self.create_random_user()
+        self.test_data_service.create_register(user_2, self.master, start_at)
+        new_master = self.test_data_service.create_master()
+        data = {'start_at': start_at, 'master_id': new_master.pk}
+
+        response = self.client.post(reverse(REGISTER_CREATE_VIEW_NAME), data)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED, response.data)
+        register = Register.objects.get(pk=response.data['pk'])
+        self.assertEqual(register.master, new_master)
+
+    def test_fail_create_register_at_the_same_time(self):
+        start_at = self.test_data_service.get_time_in_working_range()
+        self.test_data_service.create_register(self.user, self.master, start_at)
+        data = {'start_at': start_at, 'master_id': self.master.pk}
+
+        response = self.client.post(reverse(REGISTER_CREATE_VIEW_NAME), data)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST, response.data)
+        self.assertEqual(str(response.data[0]), MasterIsBusy.default_detail)
 
 
 class RegisterDestroyTestCase(IsAuthClientTestCase, APITestCase):
@@ -163,28 +201,126 @@ class RegisterUpdateTestCase(IsAuthClientTestCase, APITestCase):
     master: Master
 
     def setUp(self):
+        super().setUp()
         self.master = self.test_data_service.create_master()
 
     def test_update_register(self):
-        pass
+        new_master = self.test_data_service.create_master()
+        data = {
+            'start_at': self.test_data_service.get_time_in_working_range(timezone.now() + timedelta(days=1)),
+            'master_id': new_master.pk
+        }
+        register = self.test_data_service.create_register(self.user, self.master, timezone.now() + timedelta(days=2))
 
-    def test_fail_update_register_if_it_in_progress(self):
-        pass
+        response = self.client.patch(reverse(REGISTER_RETRIEVE_UPDATE_DESTROY_VIEW_NAME, args=(register.pk,)), data)
+        self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
+        register.refresh_from_db()
+        self.assertEqual(register.start_at, data['start_at'])
+        self.assertEqual(register.master, new_master)
 
-    def test_fail_update_register_if_it_already_ended(self):
-        pass
+    def test_fail_update_register_if_in_progress(self):
+        new_master = self.test_data_service.create_master()
+        data = {
+            'start_at': self.test_data_service.get_time_in_working_range(timezone.now() + timedelta(days=1)),
+            'master_id': new_master.pk
+        }
+        register = self.test_data_service.create_register(self.user, self.master, timezone.now() - timedelta(minutes=5))
+
+        response = self.client.patch(reverse(REGISTER_RETRIEVE_UPDATE_DESTROY_VIEW_NAME, args=(register.pk,)), data)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST, response.data)
+        self.assertEqual(str(response.data[0]), RegisterAlreadyStarted.default_detail)
+        register.refresh_from_db()
+        self.assertNotEqual(register.start_at, data['start_at'])
 
     def test_fail_update_register_time_to_busy_time(self):
-        pass
+        start_at = self.test_data_service.get_time_in_working_range(offset_after_in_hours=1)
+        register = self.test_data_service.create_register(self.user, self.master, start_at)
+        user_2 = self.create_random_user()
+        user_2_register = self.test_data_service.create_register(
+            user_2,
+            self.master,
+            start_at + timedelta(hours=settings.REGISTER_LIFETIME)
+        )
+
+        data = {'start_at': user_2_register.start_at, 'master_id': self.master.pk}
+
+        response = self.client.patch(reverse(REGISTER_RETRIEVE_UPDATE_DESTROY_VIEW_NAME, args=(register.pk,)), data)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST, response.data)
+        self.assertEqual(str(response.data[0]), MasterIsBusy.default_detail)
+
+    def test_update_register_master_and_time_to_busy_time_for_another_master(self):
+        start_at = self.test_data_service.get_time_in_working_range(offset_after_in_hours=1)
+        register = self.test_data_service.create_register(self.user, self.master, start_at)
+        user_2 = self.create_random_user()
+        user_2_register = self.test_data_service.create_register(
+            user_2,
+            self.master,
+            start_at + timedelta(hours=settings.REGISTER_LIFETIME)
+        )
+        new_master = self.test_data_service.create_master()
+
+        data = {'start_at': user_2_register.start_at, 'master_id': new_master.pk}
+
+        response = self.client.patch(reverse(REGISTER_RETRIEVE_UPDATE_DESTROY_VIEW_NAME, args=(register.pk,)), data)
+        self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
+        register.refresh_from_db()
+        self.assertEqual(register.start_at, data['start_at'])
+        self.assertEqual(register.master, new_master)
+
+    def test_update_register_time_to_this_register_time_plus_5_min(self):
+        self.test_data_service.create_master()
+        start_at = self.test_data_service.get_time_in_working_range(offset_after_in_hours=1)
+        data = {'start_at': start_at, 'master_id': self.master.pk}
+        register = self.test_data_service.create_register(self.user, self.master, start_at + timedelta(minutes=5))
+
+        response = self.client.patch(reverse(REGISTER_RETRIEVE_UPDATE_DESTROY_VIEW_NAME, args=(register.pk,)), data)
+        self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
+        register.refresh_from_db()
+        self.assertEqual(register.start_at, data['start_at'])
 
     def test_fail_update_register_time_to_less_than_an_hour_before_busy_time(self):
-        pass
+        start_at = self.test_data_service.get_time_in_working_range(offset_before_in_hours=1, offset_after_in_hours=1)
+
+        register = self.test_data_service.create_register(self.user, self.master, start_at - timedelta(days=1))
+
+        user_2 = self.create_random_user()
+        self.test_data_service.create_register(user_2, self.master,  start_at + timedelta(minutes=30))
+
+        data = {'start_at': start_at, 'master_id': self.master.pk}
+
+        response = self.client.patch(reverse(REGISTER_RETRIEVE_UPDATE_DESTROY_VIEW_NAME, args=(register.pk,)), data)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST, response.data)
+        self.assertEqual(str(response.data[0]), MasterIsBusy.default_detail)
+        register.refresh_from_db()
+        self.assertNotEqual(register.start_at, data['start_at'])
 
     def test_fail_update_register_time_to_less_than_an_hour_before_the_end_of_the_working_day(self):
-        pass
+        start_at = self.test_data_service.get_time_in_working_range().replace(
+            hour=settings.WORKING_DAY_ENDS_AT_HOUR - 1, minute=30
+        )
+        data = {'start_at': start_at, 'master_id': self.master.pk}
+
+        register = self.test_data_service.create_register(self.user, self.master)
+
+        response = self.client.patch(reverse(REGISTER_RETRIEVE_UPDATE_DESTROY_VIEW_NAME, args=(register.pk,)), data)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST, response.data)
+        self.assertEqual(str(response.data['non_field_errors'][0]), NonWorkingTime.default_detail)
+        register.refresh_from_db()
+        self.assertNotEqual(register.start_at, data['start_at'])
 
     def test_fail_update_register_time_to_after_working_time(self):
-        pass
+        start_at = self.test_data_service.get_time_in_working_range().replace(
+            hour=settings.WORKING_DAY_ENDS_AT_HOUR + 1
+        )
+        data = {'start_at': start_at, 'master_id': self.master.pk}
+
+        register = self.test_data_service.create_register(self.user, self.master)
+
+        response = self.client.patch(reverse(REGISTER_RETRIEVE_UPDATE_DESTROY_VIEW_NAME, args=(register.pk,)), data)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST, response.data)
+        self.assertEqual(str(response.data['non_field_errors'][0]), NonWorkingTime.default_detail)
+        register.refresh_from_db()
+        self.assertNotEqual(register.start_at, data['start_at'])
 
 
 class RegisterTestCase(IsAuthClientTestCase, APITestCase):

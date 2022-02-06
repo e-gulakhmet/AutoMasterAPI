@@ -11,3 +11,7 @@ class MasterIsBusy(ValidationError):
 
 class RegisterAlreadyStarted(ValidationError):
     default_detail = 'You can\'t destroy already started registry'
+
+
+class UserAlreadyHasRegisterAtTheSameTime(ValidationError):
+    default_detail = 'You can\t has multiple registers at the same time'
