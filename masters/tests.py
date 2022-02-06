@@ -36,12 +36,6 @@ class MasterTestCase(IsAuthClientTestCase, APITestCase):
             {master.pk for master in masters}
         )
 
-    def test_get_master_free_time(self):
-        pass
-
-    def test_time_must_be_greater_than_now_when_get_master_free_time(self):
-        pass
-
     # def test_get_masters_filtered_by_free_on_specified_date(self):
     #     busy_master = self.test_data_service.create_master(first_name='Busy')
     #     free_master = self.test_data_service.create_master(first_name='Free')

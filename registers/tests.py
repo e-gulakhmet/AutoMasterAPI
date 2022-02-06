@@ -1,4 +1,3 @@
-import random
 from datetime import timedelta, datetime
 from django.test import TestCase
 
@@ -8,7 +7,7 @@ from django.utils import timezone
 from rest_framework import status
 
 from masters.models import Master
-from registers.exceptions import NonWorkingTime, MasterIsBusy, RegisterAlreadyStarted, StartDateGreaterThanEndDate
+from registers.exceptions import NonWorkingTime, MasterIsBusy, RegisterAlreadyStarted
 from registers.models import Register
 from registers.services import RegisterService
 from tests.services import IsAuthClientTestCase, TestDataService
@@ -18,7 +17,7 @@ from rest_framework.test import APITestCase
 REGISTER_LIST_CREATE_VIEW_NAME = 'registers:list_create'
 REGISTER_RETRIEVE_UPDATE_DESTROY_VIEW_NAME = 'registers:retrieve_update_destroy'
 MASTER_REGISTER_LIST_VIEW_NAME = 'registers:master_list'
-FREE_DATES_LIST_VIEW_NAME = 'registers:free_dates_list'
+USER_REGISTER_LIST_VIEW_NAME = 'registers:user_list'
 
 
 class RegisterServiceCheckIsWorkingTimeMethodTestCase(TestCase):
@@ -354,96 +353,50 @@ class RegisterTestCase(IsAuthClientTestCase, APITestCase):
                                                               timezone.now() + timedelta(hours=i))
             registers.append(register)
 
+        response = self.client.get(reverse(USER_REGISTER_LIST_VIEW_NAME))
+        self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
+        self.assertEqual(response.data['count'], len(registers))
+        self.assertEqual(
+            [result['pk'] for result in response.data['results']],
+            [register.pk for register in registers]
+        )
+
+    def test_get_registers_list(self):
+        thu_date = self.test_data_service.get_tuesday()
+        registers = [self.test_data_service.create_register(self.user, self.master, thu_date),
+                     self.test_data_service.create_register(self.user, self.master, thu_date + timedelta(hours=2)),
+                     self.test_data_service.create_register(self.user, self.master, thu_date + timedelta(days=2))]
+
         response = self.client.get(reverse(REGISTER_LIST_CREATE_VIEW_NAME))
-        self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['count'], len(registers))
-        self.assertEqual(
-            [result['pk'] for result in response.data['results']],
-            [register.pk for register in registers]
-        )
 
-    def test_get_master_registers_list(self):
-        new_master = self.test_data_service.create_master()
-        self.test_data_service.create_register(self.user, new_master)
-        user_2 = self.create_random_user()
-        registers = []
-        for i in range(5):
-            register = self.test_data_service.create_register(random.choice((user_2, self.user)),
-                                                              self.master,
-                                                              timezone.now() + timedelta(hours=i))
-            registers.append(register)
-
-        response = self.client.get(reverse(MASTER_REGISTER_LIST_VIEW_NAME, args=(self.master.pk,)))
-        self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
-        self.assertEqual(response.data['count'], len(registers))
-        self.assertEqual(
-            [result['pk'] for result in response.data['results']],
-            [register.pk for register in registers]
-        )
-
-
-class FreeDatesTestCase(IsAuthClientTestCase, APITestCase):
-    test_data_service = TestDataService()
-    master: Master
-
-    def setUp(self):
-        super().setUp()
-        self.master = self.test_data_service.create_master()
-
-    def test_get_dates_with_free_time(self):
-        thu_date = timezone.now().replace(hour=settings.WORKING_DAY_STARTS_AT_HOUR, minute=0)
-
-        # Ищем дату ближайшего вторника
-        while thu_date.weekday() != 1:
-            thu_date += timedelta(days=1)
-
-        # Даты с понедельника по воскресенье
-        dates_range = (thu_date - timedelta(days=1), thu_date + timedelta(days=5))
-
-        # Создаем записи на весь день вторника(не будет выведен в ответе)
-        for hour in range(settings.WORKING_DAY_STARTS_AT_HOUR,
-                       settings.WORKING_DAY_ENDS_AT_HOUR - settings.REGISTER_LIFETIME,
-                       settings.REGISTER_LIFETIME):
-            self.test_data_service.create_register(self.user, self.master,
-                                                   thu_date.replace(hour=hour))
-
-        # Создаем одну запись среду (будет выведен в ответе)
+    def test_get_registers_list_filtered_by_start_time_and_end_time(self):
+        thu_date = self.test_data_service.get_tuesday()
+        self.test_data_service.create_register(self.user, self.master, thu_date)
+        register = self.test_data_service.create_register(self.user, self.master, thu_date + timedelta(hours=2))
         self.test_data_service.create_register(self.user, self.master, thu_date + timedelta(days=1))
+        self.test_data_service.create_register(self.user, self.master, thu_date + timedelta(days=2))
 
         response = self.client.get(
-            reverse(FREE_DATES_LIST_VIEW_NAME, args=[d.date() for d in dates_range])
+            reverse(REGISTER_LIST_CREATE_VIEW_NAME),
+            {'started_after': register.start_at, 'started_before': register.start_at + timedelta(hours=5)}
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        # Вторник заполнен, он не показывается, суббота и воскресенье выходные, имеем в итоге 4 дня,
-        # на которые можно записаться на этой неделе.
-        self.assertEqual(len(response.data), 4)
-        self.assertEqual(response.data[0], (thu_date - timedelta(days=1)).strftime('%Y-%m-%d'))
-        self.assertEqual(response.data[1], (thu_date + timedelta(days=1)).strftime('%Y-%m-%d'))
-        self.assertEqual(response.data[2], (thu_date + timedelta(days=2)).strftime('%Y-%m-%d'))
-        self.assertEqual(response.data[3], (thu_date + timedelta(days=3)).strftime('%Y-%m-%d'))
+        self.assertEqual(response.data['count'], 1)
+        self.assertEqual(response.data['results'][0]['start_at'], register.start_at.isoformat())
+        self.assertEqual(response.data['results'][0]['end_at'], register.end_at.isoformat())
 
-    def test_free_dates_must_be_greater_than_now(self):
-        mon_date = timezone.now().replace(hour=settings.WORKING_DAY_STARTS_AT_HOUR, minute=0) - timedelta(days=1)
+    def test_filter_registers_list_by_master(self):
+        thu_date = self.test_data_service.get_tuesday()
 
-        # Ищем дату ближайшего прошедшего понедельника
-        while mon_date.weekday() != 0:
-            mon_date -= timedelta(days=1)
+        register = self.test_data_service.create_register(self.user, self.master)
 
-        # Даты с предыдущего понедельника, по текущий момент
-        dates_range = (mon_date, timezone.now())
+        master_2 = self.test_data_service.create_master()
+        self.test_data_service.make_busy_day(self.user, master_2, thu_date)
 
-        response = self.client.get(reverse(FREE_DATES_LIST_VIEW_NAME, args=dates_range))
+        response = self.client.get(reverse(REGISTER_LIST_CREATE_VIEW_NAME), {'master_id': self.master.pk})
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data), 0)
-
-    def test_fail_get_free_dates_if_end_date_lt_than_start_date(self):
-        response = self.client.get(reverse(FREE_DATES_LIST_VIEW_NAME,
-                                           args=(timezone.now(), timezone.now() - timedelta(days=1))))
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST, response.data)
-        self.assertEqual(str(response.data[0]), StartDateGreaterThanEndDate.default_detail)
-
-    def test_get_specified_date_free_time(self):
-        pass
-
-    def test_free_time_must_be_greater_than_now(self):
-        pass
+        self.assertEqual(response.data['count'], 1)
+        self.assertEqual(response.data['results'][0]['start_at'], register.start_at.isoformat())
+        self.assertEqual(response.data['results'][0]['end_at'], register.end_at.isoformat())

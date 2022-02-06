@@ -104,6 +104,20 @@ class TestDataService(UserFactoryMixin):
 
         return time
 
+    @staticmethod
+    def get_tuesday() -> datetime:
+        thu_date = timezone.now().replace(hour=settings.WORKING_DAY_STARTS_AT_HOUR, minute=0)
+        # Ищем дату ближайшего вторника
+        while thu_date.weekday() != 1:
+            thu_date += timedelta(days=1)
+        return thu_date
+
+    def make_busy_day(self, user: User, master: Master, date: datetime) -> list[Register]:
+        for hour in range(settings.WORKING_DAY_STARTS_AT_HOUR,
+                          settings.WORKING_DAY_ENDS_AT_HOUR - settings.REGISTER_LIFETIME,
+                          settings.REGISTER_LIFETIME):
+            self.create_register(user, master, date.replace(hour=hour))
+
 
 def get_test_jpg_picture() -> File:
     return get_file_rb(filename='test_picture.jpg', path=settings.TEST_FILES_ROOT)
