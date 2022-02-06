@@ -15,7 +15,3 @@ class RegisterAlreadyStarted(ValidationError):
 
 class UserAlreadyHasRegisterAtTheSameTime(ValidationError):
     default_detail = 'You can\t has multiple registers at the same time'
-
-
-class StartDateGreaterThanEndDate(ValidationError):
-    default_detail = 'End date must be greater than start date'

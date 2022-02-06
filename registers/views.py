@@ -1,21 +1,20 @@
 from django.utils import timezone
-from rest_framework import generics, status
-from rest_framework.response import Response
-
+from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework import generics
 from main.pagination import StandardResultsSetPagination
 
 from registers import serializers
-from registers.exceptions import RegisterAlreadyStarted, StartDateGreaterThanEndDate
+from registers.exceptions import RegisterAlreadyStarted
+from registers.filters import RegisterFilterSet
 from registers.models import Register
-from registers.services import RegisterService
 
 
 class RegisterListCreateView(generics.ListCreateAPIView):
     pagination_class = StandardResultsSetPagination
     serializer_class = serializers.RegisterSerializer
-
-    def get_queryset(self):
-        return Register.objects.filter(user=self.request.user)
+    filter_backends = (DjangoFilterBackend,)
+    filterset_class = RegisterFilterSet
+    queryset = Register.objects.all()
 
 
 class RegisterRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
@@ -41,16 +40,9 @@ class RegisterMasterListView(generics.ListAPIView):
         return Register.objects.filter(master_id=self.kwargs['master_pk'])
 
 
-class RegisterFreeDateListView(generics.GenericAPIView):
+class RegisterUserListView(generics.ListAPIView):
     pagination_class = StandardResultsSetPagination
+    serializer_class = serializers.RegisterSerializer
 
-    def get(self, request, *args, **kwargs):
-        now_date = timezone.now().date()
-        start_date = self.kwargs['start_date'] if self.kwargs['start_date'] >= now_date else now_date
-        end_date = self.kwargs['end_date']
-
-        if end_date < start_date:
-            raise StartDateGreaterThanEndDate()
-
-        free_dates = RegisterService().get_free_dates(start_date, end_date)
-        return Response(data=[date.strftime('%Y-%m-%d') for date in free_dates], status=status.HTTP_200_OK)
+    def get_queryset(self):
+        return Register.objects.filter(user=self.request.user)
