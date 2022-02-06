@@ -67,10 +67,11 @@ class RegisterService:
             .annotate(times_in_day=Count('*')) \
             .exclude(times_in_day__lt=settings.MAX_REGISTERS_TIMES_IN_DAY)
         busy_dates = {date(d['start_at__year'], d['start_at__month'], d['start_at__day']) for d in busy_dates}
+
         dates_between = set(self.get_date_between(start_date, end_date))
+
         free_dates = list(dates_between - busy_dates)
         free_dates = self.exclude_weekend_dates(free_dates)
-        # Register.objects.filter(start_at__gte=start_date, end_at__lte=end_date).values('start_at__day').annotate(times_in_day=Count('*')).exclude(times_in_day__gte=settings.MAX_REGISTERS_TIMES_IN_DAY)
         return sorted(free_dates)
 
 

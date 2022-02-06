@@ -5,7 +5,7 @@ from rest_framework.response import Response
 from main.pagination import StandardResultsSetPagination
 
 from registers import serializers
-from registers.exceptions import RegisterAlreadyStarted
+from registers.exceptions import RegisterAlreadyStarted, StartDateGreaterThanEndDate
 from registers.models import Register
 from registers.services import RegisterService
 
@@ -45,7 +45,12 @@ class RegisterFreeDateListView(generics.GenericAPIView):
     pagination_class = StandardResultsSetPagination
 
     def get(self, request, *args, **kwargs):
-        start_date = self.kwargs['start_date']
+        now_date = timezone.now().date()
+        start_date = self.kwargs['start_date'] if self.kwargs['start_date'] >= now_date else now_date
         end_date = self.kwargs['end_date']
+
+        if end_date < start_date:
+            raise StartDateGreaterThanEndDate()
+
         free_dates = RegisterService().get_free_dates(start_date, end_date)
         return Response(data=[date.strftime('%Y-%m-%d') for date in free_dates], status=status.HTTP_200_OK)

@@ -8,7 +8,7 @@ from django.utils import timezone
 from rest_framework import status
 
 from masters.models import Master
-from registers.exceptions import NonWorkingTime, MasterIsBusy, RegisterAlreadyStarted
+from registers.exceptions import NonWorkingTime, MasterIsBusy, RegisterAlreadyStarted, StartDateGreaterThanEndDate
 from registers.models import Register
 from registers.services import RegisterService
 from tests.services import IsAuthClientTestCase, TestDataService
@@ -434,7 +434,13 @@ class FreeDatesTestCase(IsAuthClientTestCase, APITestCase):
 
         response = self.client.get(reverse(FREE_DATES_LIST_VIEW_NAME, args=dates_range))
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertGreater(response.data[0], timezone.now().strftime('%Y-%m-%d'))
+        self.assertEqual(len(response.data), 0)
+
+    def test_fail_get_free_dates_if_end_date_lt_than_start_date(self):
+        response = self.client.get(reverse(FREE_DATES_LIST_VIEW_NAME,
+                                           args=(timezone.now(), timezone.now() - timedelta(days=1))))
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST, response.data)
+        self.assertEqual(str(response.data[0]), StartDateGreaterThanEndDate.default_detail)
 
     def test_get_specified_date_free_time(self):
         pass
