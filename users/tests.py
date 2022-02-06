@@ -24,7 +24,8 @@ class UserRegistrationTestCase(IsAuthClientTestCase, APITestCase):
             'second_name': 'Bar',
             'email': 'test@test.ru',
             'password': self.USER_PASSWORD,
-            'car_model': self.CAR_MODEL
+            'car_model': self.CAR_MODEL,
+            'middle_name': 'Down'
         }
 
     def test_registration(self):
@@ -32,6 +33,10 @@ class UserRegistrationTestCase(IsAuthClientTestCase, APITestCase):
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         user = User.objects.get(email=self.credentials['email'])
         self.assertEqual(user.is_active, True)
+        self.assertEqual(user.first_name, self.credentials['first_name'])
+        self.assertEqual(user.second_name, self.credentials['second_name'])
+        self.assertEqual(user.middle_name, self.credentials['middle_name'])
+        self.assertEqual(user.car_model, self.credentials['car_model'])
 
     def test_fail_register_already_registered_email(self):
         self.test_data_service.create_user(self.credentials['email'],
@@ -41,8 +46,12 @@ class UserRegistrationTestCase(IsAuthClientTestCase, APITestCase):
         response = self.client.post(reverse(USER_REGISTER_VIEW_NAME), data=self.credentials)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST, response.data)
 
+    def test_fail_register_with_wrong_email_format(self):
+        pass
 
 class UserPasswordTestCase(IsAuthClientTestCase, APITestCase):
+    # TODO: Добавить тест на проверку длины пароля
+
     def test_change_password(self):
         data = {
             'password': self.USER_PASSWORD,
@@ -54,7 +63,7 @@ class UserPasswordTestCase(IsAuthClientTestCase, APITestCase):
         self.user.refresh_from_db()
         self.assertTrue(self.user.check_password(data['new_password']))
 
-    def test_fail_change_password_with_wrond_old_password(self):
+    def test_fail_change_password_with_wrong_old_password(self):
         data = {
             'password': 'Wrong_password',
             'new_password': 'New_password123',
