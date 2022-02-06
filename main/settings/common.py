@@ -235,7 +235,7 @@ SWAGGER_SETTINGS = {
 
 # Internationalization
 # https://docs.djangoproject.com/en/3.0/topics/i18n/
-TIME_ZONE = 'Europe/Moscow'
+TIME_ZONE = 'UTC'
 USE_L10N = False
 USE_TZ = False
 
@@ -250,3 +250,12 @@ TEMPLATES_ROOT = os.path.join(PROJECT_DIR, 'templates')
 DEFAULT_ROOT = os.path.join(PROJECT_DIR, 'default')
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+REGISTER_LIFETIME = 1  # In hours
+
+# Days of the week: 0 - Mon, 1 - Tue, 2 - Wed, 3 - Thu, 4 - Fri, 5 - Sat, 6 - Sun
+NON_WORKING_DAYS_OF_THE_WEEK = [5, 6]
+
+WORKING_DAY_STARTS_AT_HOUR = 10
+
+WORKING_DAY_ENDS_AT_HOUR = 20
