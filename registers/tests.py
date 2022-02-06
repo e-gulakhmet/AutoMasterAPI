@@ -18,6 +18,7 @@ from rest_framework.test import APITestCase
 REGISTER_LIST_CREATE_VIEW_NAME = 'registers:list_create'
 REGISTER_RETRIEVE_UPDATE_DESTROY_VIEW_NAME = 'registers:retrieve_update_destroy'
 MASTER_REGISTER_LIST_VIEW_NAME = 'registers:master_list'
+FREE_DATES_LIST_VIEW_NAME = 'registers:free_dates_list'
 
 
 class RegisterServiceCheckIsWorkingTimeMethodTestCase(TestCase):
@@ -380,14 +381,63 @@ class RegisterTestCase(IsAuthClientTestCase, APITestCase):
             [register.pk for register in registers]
         )
 
-    def test_get_dates_with_free_time(self):
-        pass
 
-    def test_dates_must_be_greater_than_now_when_get_dates_for_which_user_can_register(self):
-        pass
+class FreeDatesTestCase(IsAuthClientTestCase, APITestCase):
+    test_data_service = TestDataService()
+    master: Master
+
+    def setUp(self):
+        super().setUp()
+        self.master = self.test_data_service.create_master()
+
+    def test_get_dates_with_free_time(self):
+        thu_date = timezone.now().replace(hour=settings.WORKING_DAY_STARTS_AT_HOUR, minute=0)
+
+        # Ищем дату ближайшего вторника
+        while thu_date.weekday() != 1:
+            thu_date += timedelta(days=1)
+
+        # Даты с понедельника по воскресенье
+        dates_range = (thu_date - timedelta(days=1), thu_date + timedelta(days=5))
+
+        # Создаем записи на весь день вторника(не будет выведен в ответе)
+        for hour in range(settings.WORKING_DAY_STARTS_AT_HOUR,
+                       settings.WORKING_DAY_ENDS_AT_HOUR - settings.REGISTER_LIFETIME,
+                       settings.REGISTER_LIFETIME):
+            self.test_data_service.create_register(self.user, self.master,
+                                                   thu_date.replace(hour=hour))
+
+        # Создаем одну запись среду (будет выведен в ответе)
+        self.test_data_service.create_register(self.user, self.master, thu_date + timedelta(days=1))
+
+        response = self.client.get(
+            reverse(FREE_DATES_LIST_VIEW_NAME, args=[d.date() for d in dates_range])
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        # Вторник заполнен, он не показывается, суббота и воскресенье выходные, имеем в итоге 4 дня,
+        # на которые можно записаться на этой неделе.
+        self.assertEqual(len(response.data), 4)
+        self.assertEqual(response.data[0], (thu_date - timedelta(days=1)).strftime('%Y-%m-%d'))
+        self.assertEqual(response.data[1], (thu_date + timedelta(days=1)).strftime('%Y-%m-%d'))
+        self.assertEqual(response.data[2], (thu_date + timedelta(days=2)).strftime('%Y-%m-%d'))
+        self.assertEqual(response.data[3], (thu_date + timedelta(days=3)).strftime('%Y-%m-%d'))
+
+    def test_free_dates_must_be_greater_than_now(self):
+        mon_date = timezone.now().replace(hour=settings.WORKING_DAY_STARTS_AT_HOUR, minute=0) - timedelta(days=1)
+
+        # Ищем дату ближайшего прошедшего понедельника
+        while mon_date.weekday() != 0:
+            mon_date -= timedelta(days=1)
+
+        # Даты с предыдущего понедельника, по текущий момент
+        dates_range = (mon_date, timezone.now())
+
+        response = self.client.get(reverse(FREE_DATES_LIST_VIEW_NAME, args=dates_range))
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertGreater(response.data[0], timezone.now().strftime('%Y-%m-%d'))
 
     def test_get_specified_date_free_time(self):
         pass
 
-    def test_time_must_be_greater_than_now_when_get_specified_date_free_time(self):
+    def test_free_time_must_be_greater_than_now(self):
         pass

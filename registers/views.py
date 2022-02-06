@@ -1,11 +1,13 @@
 from django.utils import timezone
-from rest_framework import generics
+from rest_framework import generics, status
+from rest_framework.response import Response
 
 from main.pagination import StandardResultsSetPagination
 
 from registers import serializers
 from registers.exceptions import RegisterAlreadyStarted
 from registers.models import Register
+from registers.services import RegisterService
 
 
 class RegisterListCreateView(generics.ListCreateAPIView):
@@ -37,3 +39,13 @@ class RegisterMasterListView(generics.ListAPIView):
 
     def get_queryset(self):
         return Register.objects.filter(master_id=self.kwargs['master_pk'])
+
+
+class RegisterFreeDateListView(generics.GenericAPIView):
+    pagination_class = StandardResultsSetPagination
+
+    def get(self, request, *args, **kwargs):
+        start_date = self.kwargs['start_date']
+        end_date = self.kwargs['end_date']
+        free_dates = RegisterService().get_free_dates(start_date, end_date)
+        return Response(data=[date.strftime('%Y-%m-%d') for date in free_dates], status=status.HTTP_200_OK)
