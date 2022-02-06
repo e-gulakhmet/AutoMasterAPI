@@ -15,3 +15,6 @@ class Master(models.Model):
 
     def __str__(self):
         return f'{self.pk} - {self.first_name} {self.second_name}'
+
+    def get_full_name(self) -> str:
+        return f'{self.first_name} {self.second_name}'
