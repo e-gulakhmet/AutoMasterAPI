@@ -1,3 +1,7 @@
-from django.shortcuts import render
+from rest_framework import generics
 
-# Create your views here.
+from registers import serializers
+
+
+class RegisterCreateView(generics.CreateAPIView):
+    serializer_class = serializers.RegisterCreateSerializer
