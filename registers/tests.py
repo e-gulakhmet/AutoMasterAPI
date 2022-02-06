@@ -1,3 +1,4 @@
+import random
 from datetime import timedelta, datetime
 from django.test import TestCase
 
@@ -7,17 +8,16 @@ from django.utils import timezone
 from rest_framework import status
 
 from masters.models import Master
-from registers.exceptions import NonWorkingTime, MasterIsBusy, RegisterAlreadyStarted, \
-    UserAlreadyHasRegisterAtTheSameTime
+from registers.exceptions import NonWorkingTime, MasterIsBusy, RegisterAlreadyStarted
 from registers.models import Register
 from registers.services import RegisterService
 from tests.services import IsAuthClientTestCase, TestDataService
 from rest_framework.test import APITestCase
 
 
-REGISTER_CREATE_VIEW_NAME = 'registers:create'
+REGISTER_LIST_CREATE_VIEW_NAME = 'registers:list_create'
 REGISTER_RETRIEVE_UPDATE_DESTROY_VIEW_NAME = 'registers:retrieve_update_destroy'
-REGISTER_LIST_VIEW_NAME = 'registers:list'
+MASTER_REGISTER_LIST_VIEW_NAME = 'registers:master_list'
 
 
 class RegisterServiceCheckIsWorkingTimeMethodTestCase(TestCase):
@@ -66,7 +66,7 @@ class RegisterCreateTestCase(IsAuthClientTestCase, APITestCase):
             'start_at': self.test_data_service.get_time_in_working_range(),
             'master_id': self.master.pk
         }
-        response = self.client.post(reverse(REGISTER_CREATE_VIEW_NAME), data)
+        response = self.client.post(reverse(REGISTER_LIST_CREATE_VIEW_NAME), data)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED, response.data)
         register = Register.objects.get(pk=response.data['pk'])
         self.assertEqual(register.master, self.master)
@@ -80,7 +80,7 @@ class RegisterCreateTestCase(IsAuthClientTestCase, APITestCase):
         self.test_data_service.create_register(user_2, self.master, start_at)
         data = {'start_at': start_at, 'master_id': self.master.pk}
 
-        response = self.client.post(reverse(REGISTER_CREATE_VIEW_NAME), data)
+        response = self.client.post(reverse(REGISTER_LIST_CREATE_VIEW_NAME), data)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST, response.data)
         self.assertEqual(str(response.data[0]), MasterIsBusy.default_detail)
         self.assertFalse(
@@ -94,7 +94,7 @@ class RegisterCreateTestCase(IsAuthClientTestCase, APITestCase):
 
         data = {'start_at': start_at, 'master_id': self.master.pk}
 
-        response = self.client.post(reverse(REGISTER_CREATE_VIEW_NAME), data)
+        response = self.client.post(reverse(REGISTER_LIST_CREATE_VIEW_NAME), data)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST, response.data)
         self.assertEqual(str(response.data['non_field_errors'][0]), NonWorkingTime.default_detail)
         self.assertFalse(
@@ -107,7 +107,7 @@ class RegisterCreateTestCase(IsAuthClientTestCase, APITestCase):
         self.test_data_service.create_register(self.user, self.master,  start_at + timedelta(minutes=30))
         data = {'start_at': start_at, 'master_id': self.master.pk}
 
-        response = self.client.post(reverse(REGISTER_CREATE_VIEW_NAME), data)
+        response = self.client.post(reverse(REGISTER_LIST_CREATE_VIEW_NAME), data)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST, response.data)
         self.assertEqual(str(response.data[0]), MasterIsBusy.default_detail)
         self.assertFalse(
@@ -120,7 +120,7 @@ class RegisterCreateTestCase(IsAuthClientTestCase, APITestCase):
 
         data = {'start_at': start_at, 'master_id': self.master.pk}
 
-        response = self.client.post(reverse(REGISTER_CREATE_VIEW_NAME), data)
+        response = self.client.post(reverse(REGISTER_LIST_CREATE_VIEW_NAME), data)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST, response.data)
         self.assertEqual(str(response.data['non_field_errors'][0]), NonWorkingTime.default_detail)
         self.assertFalse(
@@ -133,7 +133,7 @@ class RegisterCreateTestCase(IsAuthClientTestCase, APITestCase):
 
         data = {'start_at': start_at, 'master_id': self.master.pk}
 
-        response = self.client.post(reverse(REGISTER_CREATE_VIEW_NAME), data)
+        response = self.client.post(reverse(REGISTER_LIST_CREATE_VIEW_NAME), data)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST, response.data)
         self.assertEqual(str(response.data['non_field_errors'][0]), NonWorkingTime.default_detail)
         self.assertFalse(
@@ -147,7 +147,7 @@ class RegisterCreateTestCase(IsAuthClientTestCase, APITestCase):
         new_master = self.test_data_service.create_master()
         data = {'start_at': start_at, 'master_id': new_master.pk}
 
-        response = self.client.post(reverse(REGISTER_CREATE_VIEW_NAME), data)
+        response = self.client.post(reverse(REGISTER_LIST_CREATE_VIEW_NAME), data)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED, response.data)
         register = Register.objects.get(pk=response.data['pk'])
         self.assertEqual(register.master, new_master)
@@ -157,7 +157,7 @@ class RegisterCreateTestCase(IsAuthClientTestCase, APITestCase):
         self.test_data_service.create_register(self.user, self.master, start_at)
         data = {'start_at': start_at, 'master_id': self.master.pk}
 
-        response = self.client.post(reverse(REGISTER_CREATE_VIEW_NAME), data)
+        response = self.client.post(reverse(REGISTER_LIST_CREATE_VIEW_NAME), data)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST, response.data)
         self.assertEqual(str(response.data[0]), MasterIsBusy.default_detail)
 
@@ -328,16 +328,57 @@ class RegisterTestCase(IsAuthClientTestCase, APITestCase):
     master: Master
 
     def setUp(self):
+        super().setUp()
         self.master = self.test_data_service.create_master()
 
     def test_get_register_by_id(self):
-        pass
+        register = self.test_data_service.create_register(self.user, self.master)
+
+        response = self.client.get(reverse(REGISTER_RETRIEVE_UPDATE_DESTROY_VIEW_NAME, args=(register.pk,)))
+        self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
+        register.refresh_from_db()
+        self.assertEqual(response.data['master']['pk'], self.master.pk)
+        self.assertEqual(response.data['start_at'], register.start_at.isoformat())
+        self.assertEqual(response.data['end_at'], register.end_at.isoformat())
+        self.assertEqual(response.data['user']['pk'], register.user.pk)
+        self.assertEqual(response.data['created_at'], register.created_at.isoformat())
 
     def test_get_request_user_registers_list(self):
-        pass
+        user_2 = self.create_random_user()
+        self.test_data_service.create_register(user_2, self.master, timezone.now() - timedelta(days=2))
+        registers = []
+        for i in range(5):
+            register = self.test_data_service.create_register(self.user,
+                                                              self.master,
+                                                              timezone.now() + timedelta(hours=i))
+            registers.append(register)
+
+        response = self.client.get(reverse(REGISTER_LIST_CREATE_VIEW_NAME))
+        self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
+        self.assertEqual(response.data['count'], len(registers))
+        self.assertEqual(
+            [result['pk'] for result in response.data['results']],
+            [register.pk for register in registers]
+        )
 
     def test_get_master_registers_list(self):
-        pass
+        new_master = self.test_data_service.create_master()
+        self.test_data_service.create_register(self.user, new_master)
+        user_2 = self.create_random_user()
+        registers = []
+        for i in range(5):
+            register = self.test_data_service.create_register(random.choice((user_2, self.user)),
+                                                              self.master,
+                                                              timezone.now() + timedelta(hours=i))
+            registers.append(register)
+
+        response = self.client.get(reverse(MASTER_REGISTER_LIST_VIEW_NAME, args=(self.master.pk,)))
+        self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
+        self.assertEqual(response.data['count'], len(registers))
+        self.assertEqual(
+            [result['pk'] for result in response.data['results']],
+            [register.pk for register in registers]
+        )
 
     def test_get_dates_with_free_time(self):
         pass

@@ -10,6 +10,7 @@ from registers.exceptions import MasterIsBusy, NonWorkingTime, RegisterAlreadySt
 
 from registers.models import Register
 from registers.services import RegisterService
+from users.serializers import UserRetrieveUpdateSerializer
 
 
 class RegisterSerializer(serializers.ModelSerializer):
@@ -21,6 +22,7 @@ class RegisterSerializer(serializers.ModelSerializer):
     """
 
     master = MasterSerializer(read_only=True)
+    user = UserRetrieveUpdateSerializer(read_only=True)
     start_at = serializers.DateTimeField(required=True)
     master_id = serializers.IntegerField(required=True)
 
@@ -33,6 +35,7 @@ class RegisterSerializer(serializers.ModelSerializer):
             'master',
             'created_at',
             'master_id',
+            'user',
         ]
         read_only_fields = [
             'pk',
@@ -40,6 +43,7 @@ class RegisterSerializer(serializers.ModelSerializer):
             'master',
             'created_at',
             'master_id',
+            'user',
         ]
 
     def validate(self, attrs):
