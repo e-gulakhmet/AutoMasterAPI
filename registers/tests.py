@@ -3,10 +3,11 @@ from django.test import TestCase
 
 from django.conf import settings
 from django.urls import reverse
+from django.utils import timezone
 from rest_framework import status
 
 from masters.models import Master
-from registers.exceptions import NonWorkingTime, MasterIsBusy
+from registers.exceptions import NonWorkingTime, MasterIsBusy, RegisterAlreadyStarted
 from registers.models import Register
 from registers.services import RegisterService
 from tests.services import IsAuthClientTestCase, TestDataService
@@ -14,7 +15,7 @@ from rest_framework.test import APITestCase
 
 
 REGISTER_CREATE_VIEW_NAME = 'registers:create'
-REGISTER_RETRIEVE_VIEW_NAME = 'registers:retrieve_update_destroy'
+REGISTER_RETRIEVE_UPDATE_DESTROY_VIEW_NAME = 'registers:retrieve_update_destroy'
 REGISTER_LIST_VIEW_NAME = 'registers:list'
 
 
@@ -128,16 +129,34 @@ class RegisterDestroyTestCase(IsAuthClientTestCase, APITestCase):
     master: Master
 
     def setUp(self):
+        super().setUp()
         self.master = self.test_data_service.create_master()
 
     def test_destroy_register(self):
-        pass
+        register = self.test_data_service.create_register(self.user, self.master, timezone.now() + timedelta(days=2))
 
-    def test_fail_destroy_register_if_it_in_progress(self):
-        pass
+        response = self.client.delete(reverse(REGISTER_RETRIEVE_UPDATE_DESTROY_VIEW_NAME, args=(register.pk,)))
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT, response.data)
+        self.assertFalse(Register.objects.filter(pk=register.pk).exists())
 
-    def test_fail_destroy_register_if_it_already_ended(self):
-        pass
+    def test_fail_destroy_register_if_in_progress(self):
+        register = self.test_data_service.create_register(self.user, self.master, timezone.now() - timedelta(minutes=5))
+        response = self.client.delete(reverse(REGISTER_RETRIEVE_UPDATE_DESTROY_VIEW_NAME, args=(register.pk,)))
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST, response.data)
+        self.assertEqual(str(response.data[0]), RegisterAlreadyStarted.default_detail)
+        self.assertTrue(Register.objects.filter(pk=register.pk).exists())
+
+    def test_fail_destroy_old_register(self):
+        register = self.test_data_service.create_register(
+            self.user,
+            self.master,
+            timezone.now() - timedelta(hours=settings.REGISTER_LIFETIME + 1)
+        )
+        response = self.client.delete(reverse(REGISTER_RETRIEVE_UPDATE_DESTROY_VIEW_NAME, args=(register.pk,)))
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST, response.data)
+        self.assertEqual(str(response.data[0]), RegisterAlreadyStarted.default_detail)
+        self.assertTrue(Register.objects.filter(pk=register.pk).exists())
+
 
 class RegisterUpdateTestCase(IsAuthClientTestCase, APITestCase):
     test_data_service = TestDataService()

@@ -7,3 +7,7 @@ class NonWorkingTime(ValidationError):
 
 class MasterIsBusy(ValidationError):
     default_detail = 'Master is busy at this time'
+
+
+class RegisterAlreadyStarted(ValidationError):
+    default_detail = 'You can\'t destroy already started registry'
