@@ -4,7 +4,8 @@ from masters.models import Master
 
 
 class MasterSerializer(serializers.ModelSerializer):
-    # TODO: Добавить поле количества записей мастера
+    registers_count = serializers.SerializerMethodField()
+
     class Meta:
         model = Master
         fields = [
@@ -12,10 +13,16 @@ class MasterSerializer(serializers.ModelSerializer):
             'first_name',
             'second_name',
             'middle_name',
+            'registers_count'
         ]
         read_only_fields = [
             'pk',
             'first_name',
             'second_name',
             'middle_name',
+            'registers_count'
         ]
+
+    @staticmethod
+    def get_registers_count(instance: Master) -> int:
+        return instance.registers.count()

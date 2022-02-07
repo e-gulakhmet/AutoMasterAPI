@@ -1,5 +1,5 @@
 import os.path
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from django.conf import settings
 from django.db import models
@@ -8,7 +8,9 @@ from django.utils.translation import gettext_lazy as _
 
 class MasterQuerySet(models.QuerySet):
     def exclude_busy_masters_at_specified_time(self, date_time: datetime):
-        return self.exclude(registers__start_at__lte=date_time, registers__end_at__gte=date_time)
+        return self.exclude(
+            registers__start_at__range=[date_time, date_time + timedelta(hours=settings.REGISTER_LIFETIME)]
+        )
 
 
 class MasterManager(models.Manager):

@@ -67,17 +67,8 @@ class RegisterSerializer(serializers.ModelSerializer):
         if Register.objects.filter(
             master=master,
             start_at__range=[start_at, start_at + timedelta(hours=settings.REGISTER_LIFETIME)],
-            end_at__gte=start_at
         ).exists():
             raise MasterIsBusy()
-
-        # TODO: Проверить!
-        # if Register.objects.filter(
-        #         master=master,
-        #         start_at__lte=start_at,
-        #         end_at__gte=start_at
-        # ).exists():
-        #     raise UnavailableTime()
 
         return super().create(validated_data)
 
@@ -89,19 +80,10 @@ class RegisterSerializer(serializers.ModelSerializer):
         if Register.objects.filter(
                 master=master,
                 start_at__range=[start_at, start_at + timedelta(hours=settings.REGISTER_LIFETIME)],
-                end_at__gte=start_at
         ).exclude(user=user).exists():
             raise MasterIsBusy()
 
         if instance.start_at <= timezone.now():
             raise RegisterAlreadyStarted()
-
-        # TODO: Проверить!
-        # if Register.objects.filter(
-        #         master=master,
-        #         start_at__lte=start_at,
-        #         end_at__gte=start_at
-        # ).exists():
-        #     raise UnavailableTime()
 
         return super().update(instance, validated_data)
