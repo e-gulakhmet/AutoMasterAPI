@@ -33,3 +33,16 @@ API сервис для записи в автомастерскую на диа
 записи
 - Удаление записи, можно удалять только записи, которые еще не прошли.
 
+### API:
+
+#### Документация:
+
+- Документация: server_host:server_port/swagger/
+
+#### Запуск сервисов через docker или docker-compose
+
+`docker-compose up`
+
+## Запуск тестов:
+
+`python manage.py test --settings=main.settings.test`
