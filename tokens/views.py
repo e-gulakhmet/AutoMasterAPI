@@ -14,40 +14,26 @@ from tokens.serializers import (
 
 class TokenObtainPairView(TokenViewBase):
     permission_classes = [AllowAny]
-    """
-    Takes a set of user credentials and returns an access and refresh JSON web
-    token pair to prove the authentication of those credentials.
-    """
     serializer_class = TokenObtainPairSerializer
+
+    def post(self, request, *args, **kwargs):
+        """ Генерирует jwt токен для пользователя, данные которого были указаны """
+        return super().post(request, *args, **kwargs)
 
 
 class TokenRefreshView(TokenViewBase):
     permission_classes = [AllowAny]
-    """
-    Takes a refresh type JSON web token and returns an access type JSON web
-    token if the refresh token is valid.
-    """
     serializer_class = TokenRefreshSerializer
 
-
-class TokenObtainSlidingView(TokenViewBase):
-    permission_classes = [AllowAny]
-    """
-    Takes a set of user credentials and returns a sliding JSON web token to
-    prove the authentication of those credentials.
-    """
-    serializer_class = TokenObtainSlidingSerializer
-
-
-class TokenRefreshSlidingView(TokenViewBase):
-    permission_classes = [AllowAny]
-    """
-    Takes a sliding JSON web token and returns a new, refreshed version if the
-    token's refresh period has not expired.
-    """
-    serializer_class = TokenRefreshSlidingSerializer
+    def post(self, request, *args, **kwargs):
+        """
+        Принимает refresh jwt токен и возвращает access jwt токен,
+        если токен обновления действителен.
+        """
+        return super().post(request, *args, **kwargs)
 
 
 class LoginCheckView(APIView):
     def post(self, request, *args, **kwargs):
+        """ Проверяет jwt токен, который указан в headers """
         return Response(status=status.HTTP_200_OK)

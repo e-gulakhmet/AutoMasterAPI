@@ -1,11 +1,10 @@
-from django.contrib.auth.decorators import user_passes_test
 from django.urls import path
 from rest_framework import routers
 from rest_framework_simplejwt.views import TokenVerifyView
 
 from tokens import views
 
-app_name = 'Users api'
+app_name = 'Tokens api'
 
 router = routers.SimpleRouter(trailing_slash=False)
 

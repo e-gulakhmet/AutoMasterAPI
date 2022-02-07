@@ -103,7 +103,8 @@ class TokenObtainSlidingSerializer(TokenObtainSerializer):
 
 
 class TokenRefreshSerializer(serializers.Serializer):
-    refresh = serializers.CharField()
+    refresh = serializers.CharField(write_only=True)
+    access = serializers.CharField(read_only=True)
 
     def validate(self, attrs):
         refresh = RefreshToken(attrs['refresh'])
@@ -113,11 +114,8 @@ class TokenRefreshSerializer(serializers.Serializer):
         if api_settings.ROTATE_REFRESH_TOKENS:
             if api_settings.BLACKLIST_AFTER_ROTATION:
                 try:
-                    # Attempt to blacklist the given refresh token
                     refresh.blacklist()
                 except AttributeError:
-                    # If blacklist app not installed, `blacklist` method will
-                    # not be present
                     pass
 
             refresh.set_jti()
