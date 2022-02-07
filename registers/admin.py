@@ -4,5 +4,7 @@ from registers.models import Register
 
 
 @admin.register(Register)
-class UserAdmin(admin.ModelAdmin):
-    pass
+class RegisterAdmin(admin.ModelAdmin):
+    list_filter = (
+        'master',
+    )
