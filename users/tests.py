@@ -49,6 +49,7 @@ class UserRegistrationTestCase(IsAuthClientTestCase, APITestCase):
     def test_fail_register_with_wrong_email_format(self):
         pass
 
+
 class UserPasswordTestCase(IsAuthClientTestCase, APITestCase):
     def test_change_password(self):
         data = {
