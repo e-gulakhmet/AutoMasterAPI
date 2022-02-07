@@ -36,14 +36,14 @@ class MasterTestCase(IsAuthClientTestCase, APITestCase):
             {master.pk for master in masters}
         )
 
-    # def test_get_masters_filtered_by_free_on_specified_date(self):
-    #     busy_master = self.test_data_service.create_master(first_name='Busy')
-    #     free_master = self.test_data_service.create_master(first_name='Free')
-    #
-    #     free_at = timezone.now() + timedelta(days=2)
-    #     # Добавить запись для busy master на указанное время free_at
-    #
-    #     response = self.client.get(reverse(MASTER_LIST_VIEW_NAME), {'free_at': free_at})
-    #     self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
-    #     self.assertEqual(response.data['count'], 1)
-    #     self.assertEqual(response.data['results'][0]['pk'], free_master.pk)
+    def test_get_masters_filtered_by_free_on_specified_date(self):
+        busy_master = self.test_data_service.create_master(first_name='Busy')
+        free_master = self.test_data_service.create_master(first_name='Free')
+
+        free_at = self.test_data_service.get_time_in_working_range(timezone.now() + timedelta(days=2))
+        self.test_data_service.create_register(self.user, busy_master, free_at)
+
+        response = self.client.get(reverse(MASTER_LIST_VIEW_NAME), {'free_at': free_at})
+        self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
+        self.assertEqual(response.data['count'], 1)
+        self.assertEqual(response.data['results'][0]['pk'], free_master.pk)

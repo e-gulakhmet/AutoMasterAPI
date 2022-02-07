@@ -1,8 +1,19 @@
 import os.path
+from datetime import datetime
 
 from django.conf import settings
 from django.db import models
 from django.utils.translation import gettext_lazy as _
+
+
+class MasterQuerySet(models.QuerySet):
+    def exclude_busy_masters_at_specified_time(self, date_time: datetime):
+        return self.exclude(registers__start_at__lte=date_time, registers__end_at__gte=date_time)
+
+
+class MasterManager(models.Manager):
+    def get_queryset(self):
+        return MasterQuerySet(self.model, using=self._db)
 
 
 class Master(models.Model):
@@ -12,6 +23,8 @@ class Master(models.Model):
     avatar = models.ImageField(_('Avatar image'), default=os.path.join(settings.DEFAULT_ROOT, 'master_avatar.png'))
 
     created_at = models.DateTimeField(auto_now_add=True)
+
+    objects = MasterManager()
 
     def __str__(self):
         return f'{self.pk} - {self.first_name} {self.second_name}'
