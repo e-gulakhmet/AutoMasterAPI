@@ -76,7 +76,7 @@ class TestDataService(UserFactoryMixin):
         return Register.objects.create(user=user, master=master, start_at=start_at)
 
     @staticmethod
-    def get_time_in_working_range(time: datetime = timezone.now(),
+    def get_time_in_working_range(time: datetime = timezone.now() + timedelta(minutes=5),
                                   offset_before_in_hours: int = 0,
                                   offset_after_in_hours: int = 0, ) -> datetime:
         """
@@ -87,7 +87,7 @@ class TestDataService(UserFactoryMixin):
         - оставляет запас на время процесса работы
         """
 
-        now_time = timezone.now()
+        now_time = timezone.now() + timedelta(minutes=5)
 
         if time < now_time:
             time = now_time
