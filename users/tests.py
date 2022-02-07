@@ -50,8 +50,6 @@ class UserRegistrationTestCase(IsAuthClientTestCase, APITestCase):
         pass
 
 class UserPasswordTestCase(IsAuthClientTestCase, APITestCase):
-    # TODO: Добавить тест на проверку длины пароля
-
     def test_change_password(self):
         data = {
             'password': self.USER_PASSWORD,
