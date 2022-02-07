@@ -46,3 +46,9 @@ API сервис для записи в автомастерскую на диа
 ## Запуск тестов:
 
 `python manage.py test --settings=main.settings.test`
+
+## Создание админа:
+```shell script
+docker exec -it service-main bash
+python manage.py createsuperuser
+```
