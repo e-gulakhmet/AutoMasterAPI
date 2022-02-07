@@ -1,0 +1,12 @@
+.gitignore
+.env
+.env.*
+.pylintrc
+venv
+staticfiles
+docker-compose.yml
+.coverage
+Dockerfile
+README.md
+static/
+media/

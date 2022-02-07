@@ -35,7 +35,7 @@ services:
       - DJANGO_SETTINGS_MODULE=main.settings.local-docker
       - WAITING_DATABASE=true
       - MIGRATE=true
-      - DB_HOST=sna-postgres
+      - DB_HOST=service-postgres
       - DB_PORT=5432
     command: python manage.py runserver 0.0.0.0:80
     volumes:
