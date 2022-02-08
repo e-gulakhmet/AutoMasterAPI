@@ -36,6 +36,11 @@ class UserCreateSerializer(serializers.Serializer):
 
 
 class UserRetrieveUpdateSerializer(serializers.ModelSerializer):
+    first_name = serializers.CharField(required=False)
+    second_name = serializers.CharField(required=False)
+    middle_name = serializers.CharField(required=False)
+    car_model = serializers.CharField(required=False)
+
     class Meta:
         model = User
         fields = [
